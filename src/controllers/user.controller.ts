@@ -5,7 +5,7 @@ export const getProfile = async (req: Request, res: Response) => {
   try {
     const user = req.user;
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
     }
 
     res.status(200).json({ user });
@@ -26,7 +26,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     }).select('-password');
 
     if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
     }
 
     res.status(200).json({ user: updatedUser });

@@ -50,7 +50,7 @@ UserSchema.methods.comparePassword = async function (
 UserSchema.methods.generateAuthToken = function (this: IUser): string {
   const JWT_SECRET = ENV.JWT_SECRET as string;
   return jwt.sign({ id: this._id }, JWT_SECRET, {
-    expiresIn: ENV.JWT_EXPIRE || '1d',
+    expiresIn: ENV.JWT_EXPIRE,
   });
 };
 

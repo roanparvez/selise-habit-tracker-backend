@@ -8,23 +8,23 @@ export const createHabit = async (req: Request, res: Response) => {
       user: req.user.id,
     });
 
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       habit,
     });
   } catch (error) {
     console.error('Create Habit Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
 export const getHabits = async (req: Request, res: Response) => {
   try {
     const habits = await Habit.find({ user: req.user.id });
-    return res.status(200).json({ success: true, habits });
+    res.status(200).json({ success: true, habits });
   } catch (error) {
     console.error('Get Habits Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -38,13 +38,13 @@ export const updateHabit = async (req: Request, res: Response) => {
     );
 
     if (!habit) {
-      return res.status(404).json({ message: 'Habit not found' });
+      res.status(404).json({ message: 'Habit not found' });
     }
 
-    return res.status(200).json({ success: true, habit });
+    res.status(200).json({ success: true, habit });
   } catch (error) {
     console.error('Update Habit Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -57,13 +57,13 @@ export const deleteHabit = async (req: Request, res: Response) => {
     });
 
     if (!habit) {
-      return res.status(404).json({ message: 'Habit not found' });
+      res.status(404).json({ message: 'Habit not found' });
     }
 
-    return res.status(200).json({ success: true, message: 'Habit deleted' });
+    res.status(200).json({ success: true, message: 'Habit deleted' });
   } catch (error) {
     console.error('Delete Habit Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -78,13 +78,13 @@ export const markHabitComplete = async (req: Request, res: Response) => {
     );
 
     if (!habit) {
-      return res.status(404).json({ message: 'Habit not found' });
+      res.status(404).json({ message: 'Habit not found' });
     }
 
-    return res.status(200).json({ success: true, habit });
+    res.status(200).json({ success: true, habit });
   } catch (error) {
     console.error('Complete Habit Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -120,7 +120,10 @@ export const getHabitSummary = async (req: Request, res: Response) => {
 
     let longestStreak = 0;
     for (const habit of habits) {
-      if (habit.completedDates && habit.completedDates.length > 0) {
+      if (
+        Array.isArray(habit.completedDates) &&
+        habit.completedDates.length > 0
+      ) {
         longestStreak = Math.max(
           longestStreak,
           getLongestStreak(habit.completedDates)
@@ -128,7 +131,7 @@ export const getHabitSummary = async (req: Request, res: Response) => {
       }
     }
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       summary: {
         totalHabits,
@@ -138,6 +141,6 @@ export const getHabitSummary = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Get Habit Summary Error:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
