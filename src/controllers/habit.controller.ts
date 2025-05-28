@@ -3,7 +3,10 @@ import Habit from '../models/habit.model';
 import { calculateStreak } from '../utils/calculateStreak';
 
 // Create a new habit
-export const createHabit = async (req: Request, res: Response) => {
+export const createHabit = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const habit = await Habit.create({
       ...req.body,
@@ -21,7 +24,7 @@ export const createHabit = async (req: Request, res: Response) => {
 };
 
 // Get all habits for the authenticated user
-export const getHabits = async (req: Request, res: Response) => {
+export const getHabits = async (req: Request, res: Response): Promise<void> => {
   try {
     const habits = await Habit.find({ user: req.user.id });
     res.status(200).json({ success: true, habits });
@@ -32,7 +35,10 @@ export const getHabits = async (req: Request, res: Response) => {
 };
 
 // Update a habit
-export const updateHabit = async (req: Request, res: Response) => {
+export const updateHabit = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const habit = await Habit.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
@@ -41,7 +47,7 @@ export const updateHabit = async (req: Request, res: Response) => {
     );
 
     if (!habit) {
-      return res.status(404).json({ message: 'Habit not found' });
+      res.status(404).json({ message: 'Habit not found' });
     }
 
     res.status(200).json({ success: true, habit });
@@ -52,7 +58,10 @@ export const updateHabit = async (req: Request, res: Response) => {
 };
 
 // Delete a habit
-export const deleteHabit = async (req: Request, res: Response) => {
+export const deleteHabit = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const habit = await Habit.findOneAndDelete({
       _id: req.params.id,
@@ -60,7 +69,7 @@ export const deleteHabit = async (req: Request, res: Response) => {
     });
 
     if (!habit) {
-      return res.status(404).json({ message: 'Habit not found' });
+      res.status(404).json({ message: 'Habit not found' });
     }
 
     res.status(200).json({ success: true, message: 'Habit deleted' });
@@ -71,7 +80,10 @@ export const deleteHabit = async (req: Request, res: Response) => {
 };
 
 // Mark a habit as completed for today
-export const markHabitComplete = async (req: Request, res: Response) => {
+export const markHabitComplete = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
@@ -82,7 +94,7 @@ export const markHabitComplete = async (req: Request, res: Response) => {
     });
 
     if (!habit) {
-      return res.status(404).json({ message: 'Habit not found' });
+      res.status(404).json({ message: 'Habit not found' });
     }
 
     const completedDates = habit.completedDates as Date[];
@@ -116,7 +128,10 @@ export const markHabitComplete = async (req: Request, res: Response) => {
 };
 
 // Get summary of all habits
-export const getHabitSummary = async (req: Request, res: Response) => {
+export const getHabitSummary = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const userId = req.user.id;
     const habits = await Habit.find({ user: userId });
