@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import Habit from '../models/habit.model';
+import { calculateStreak } from '../utils/calculateStreak';
 
+// Create a new habit
 export const createHabit = async (req: Request, res: Response) => {
   try {
     const habit = await Habit.create({
@@ -18,6 +20,7 @@ export const createHabit = async (req: Request, res: Response) => {
   }
 };
 
+// Get all habits for the authenticated user
 export const getHabits = async (req: Request, res: Response) => {
   try {
     const habits = await Habit.find({ user: req.user.id });
@@ -38,7 +41,7 @@ export const updateHabit = async (req: Request, res: Response) => {
     );
 
     if (!habit) {
-      res.status(404).json({ message: 'Habit not found' });
+      return res.status(404).json({ message: 'Habit not found' });
     }
 
     res.status(200).json({ success: true, habit });
@@ -57,7 +60,7 @@ export const deleteHabit = async (req: Request, res: Response) => {
     });
 
     if (!habit) {
-      res.status(404).json({ message: 'Habit not found' });
+      return res.status(404).json({ message: 'Habit not found' });
     }
 
     res.status(200).json({ success: true, message: 'Habit deleted' });
@@ -67,19 +70,43 @@ export const deleteHabit = async (req: Request, res: Response) => {
   }
 };
 
-// Mark as completed (add today’s date)
+// Mark a habit as completed for today
 export const markHabitComplete = async (req: Request, res: Response) => {
   try {
     const today = new Date();
-    const habit = await Habit.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id },
-      { $addToSet: { completedDates: today } }, // prevents duplicates
-      { new: true }
-    );
+    const todayStr = today.toISOString().split('T')[0];
+
+    const habit = await Habit.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
 
     if (!habit) {
-      res.status(404).json({ message: 'Habit not found' });
+      return res.status(404).json({ message: 'Habit not found' });
     }
+
+    const completedDates = habit.completedDates as Date[];
+    const alreadyCompletedToday = completedDates.some(
+      (d) => new Date(d).toISOString().split('T')[0] === todayStr
+    );
+
+    if (!alreadyCompletedToday) {
+      completedDates.push(today);
+    }
+
+    completedDates.sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    );
+
+    const { currentStreak, longestStreak } = calculateStreak(
+      completedDates,
+      habit.frequency as 'daily' | 'weekly' | 'monthly'
+    );
+
+    habit.currentStreak = currentStreak;
+    habit.longestStreak = longestStreak;
+
+    await habit.save();
 
     res.status(200).json({ success: true, habit });
   } catch (error) {
@@ -88,55 +115,64 @@ export const markHabitComplete = async (req: Request, res: Response) => {
   }
 };
 
+// Get summary of all habits
 export const getHabitSummary = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;
     const habits = await Habit.find({ user: userId });
 
-    const totalHabits = habits.length;
-    const activeHabits = habits.filter((h) => h.isActive !== false).length;
+    const now = new Date();
+    let longestStreakOverall = 0;
+    let activeHabits = 0;
 
-    // Calculate longest streak
-    const getLongestStreak = (dates: Date[]) => {
-      const sorted = dates
-        .map((d) => new Date(d))
-        .sort((a, b) => a.getTime() - b.getTime());
-      let longest = 0,
-        current = 1;
+    for (const habit of habits) {
+      const completedDates = habit.completedDates as Date[];
 
-      for (let i = 1; i < sorted.length; i++) {
-        const diff =
-          (sorted[i].getTime() - sorted[i - 1].getTime()) / (1000 * 3600 * 24);
-        if (diff === 1) {
-          current++;
-          longest = Math.max(longest, current);
-        } else {
-          current = 1;
-        }
+      if (!completedDates || completedDates.length === 0) continue;
+
+      completedDates.sort(
+        (a, b) => new Date(a).getTime() - new Date(b).getTime()
+      );
+
+      const { longestStreak, currentStreak } = calculateStreak(
+        completedDates,
+        habit.frequency as 'daily' | 'weekly' | 'monthly'
+      );
+
+      if (
+        habit.longestStreak !== longestStreak ||
+        habit.currentStreak !== currentStreak
+      ) {
+        habit.longestStreak = longestStreak;
+        habit.currentStreak = currentStreak;
+        await habit.save();
       }
 
-      return Math.max(longest, 1);
-    };
+      longestStreakOverall = Math.max(longestStreakOverall, longestStreak);
 
-    let longestStreak = 0;
-    for (const habit of habits) {
-      if (
-        Array.isArray(habit.completedDates) &&
-        habit.completedDates.length > 0
-      ) {
-        longestStreak = Math.max(
-          longestStreak,
-          getLongestStreak(habit.completedDates)
-        );
+      const lastCompleted = new Date(
+        Math.max(...completedDates.map((d) => new Date(d).getTime()))
+      );
+
+      const diffInDays =
+        (now.getTime() - lastCompleted.getTime()) / (1000 * 3600 * 24);
+
+      const isActive =
+        (habit.frequency === 'daily' && diffInDays <= 1) ||
+        (habit.frequency === 'weekly' && diffInDays <= 7) ||
+        (habit.frequency === 'monthly' && diffInDays <= 31);
+
+      if (isActive) {
+        activeHabits++;
       }
     }
 
     res.status(200).json({
       success: true,
       summary: {
-        totalHabits,
+        totalHabits: habits.length,
         activeHabits,
-        longestStreak,
+        longestStreak: longestStreakOverall,
       },
     });
   } catch (error) {
